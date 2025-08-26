@@ -1,30 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@tailwind base; @tailwind components; @tailwind utilities;
-:root{ --border:#E5E7EB; }
-@layer base{ html,body,#root{height:100%} body{@apply text-slate-900 bg-slate-50} }
-@layer components{
-  .card{@apply bg-white border border-[var(--border)] rounded-xl shadow-card overflow-hidden}
-  .tab{@apply relative px-4 py-3 font-semibold text-slate-700}
-  .tab-active{@apply text-slate-900}
-  .tab-active::after{content:"";@apply absolute left-0 right-0 -bottom-px h-[3px] bg-violet-600}
-  .pill{@apply text-xs font-semibold text-slate-600 bg-slate-50 border border-[var(--border)] rounded-md px-3 py-1}
-  .pill-active{@apply bg-indigo-50 border-indigo-200 text-indigo-900}
-  .badge{@apply inline-flex items-center gap-2 px-3 py-1 border border-[var(--border)] rounded-md text-xs text-slate-600 bg-white shadow-sm mb-2}
-  .input{@apply w-full h-10 border border-[var(--border)] rounded-lg px-3 text-sm bg-white outline-none focus:ring-4 focus:ring-slate-300/40 focus:border-slate-400 placeholder:text-slate-400}
-  @layer components {
+/* tokens */
+:root { --border: #E5E7EB; }
+
+/* base */
+@layer base {
+  html, body, #root { height: 100% }
+  body { @apply bg-slate-50 text-slate-900 }
+}
+
+/* components */
+@layer components {
+  /* card + top tabs */
+  /* .card { @apply bg-white border border-[var(--border)] rounded-xl shadow-[0_1px_2px_rgba(16,24,40,.06)] overflow-hidden; } */
+  .tab { @apply relative px-4 py-3 font-semibold text-slate-700; }
+  .tab-active { @apply text-slate-900; }
+  .tab-active::after { content:""; @apply absolute left-0 right-0 -bottom-px h-[3px] bg-violet-600; }
+
+  /* pills */
+  .pillbar { @apply inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 p-1; }
+  .pill { @apply rounded-md border border-slate-200 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-600 transition-colors; }
+  .pill:hover { @apply bg-white text-slate-800; }
+  .pill-active { @apply bg-white text-slate-900 border-slate-300 shadow-sm; }
+  .pill-disabled { @apply cursor-not-allowed text-slate-400; }
+
+  /* section chip */
+  .badge { @apply mb-2 inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 py-1 text-xs text-slate-600 shadow-sm; }
+
+  /* segmented control (gender) */
+  .segmented { @apply inline-flex overflow-hidden rounded-md border border-slate-200; }
+  .segmented-item { @apply h-10 bg-white px-4 text-sm text-slate-700 border-r border-slate-200; }
+  .segmented-item:last-child { @apply border-r-0; }
+  .segmented-item-active { @apply bg-slate-100 font-medium; }
+
+  /* standard input */
+  .input { @apply h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-300/40; }
   .select {
     @apply input pr-8 appearance-none bg-no-repeat;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23667085'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
     background-position: right 8px center;
     background-size: 20px 20px;
   }
+
+  /* floating input (label inside box, like Figma) */
+  .fl { @apply relative; }
+  .fl-input { @apply input pt-[18px]; } /* lift content to make room for label */
+  .fl-label { @apply pointer-events-none absolute left-3 top-[6px] text-[11px] leading-none font-medium text-slate-500; }
+  .fl-right { @apply absolute right-1 top-1/2 -translate-y-1/2; }
+
+  /* tiny boxes 48×40, r=8, 1px border with mini label top-left */
+  .tinywrap { @apply relative h-10 w-[48px]; }
+  .tinybox   { @apply h-10 w-[48px] rounded-[8px] border border-slate-300 bg-white px-2 text-center text-sm outline-none; }
+  .tinybox:focus { @apply border-slate-400 ring-4 ring-slate-300/40; }
+  .tinylabel { @apply pointer-events-none absolute left-2 top-[4px] text-[10px] leading-none font-medium text-slate-500; }
+
+  /* buttons */
+  .btn { @apply inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 font-semibold text-slate-700; }
+  .btn-primary { @apply border-blue-600 bg-blue-600 text-white; }
+  .btn-primary:disabled { @apply cursor-not-allowed border-blue-300 bg-blue-300; }
+
+  /* footer */
+  .footer-strip { @apply border-t border-[var(--border)] bg-slate-100 px-5 py-4; }
+
+  /* icons */
+  .icon { @apply h-5 w-5; }
+  .icon-muted { @apply h-4 w-4 opacity-70; }
+
+  /* avatar camera badge */
+  .avatar-badge { @apply absolute -bottom-1 -right-1 rounded-full border border-slate-200 bg-white p-1; }
 }
-  .btn{@apply h-10 rounded-xl px-3 font-semibold border border-[var(--border)] bg-white text-slate-700 inline-flex items-center gap-2}
-  .btn-primary{@apply bg-blue-600 text-white border-blue-600}
-  .btn-primary:disabled{@apply bg-blue-300 border-blue-300 cursor-not-allowed}
-  .footer-strip{@apply bg-slate-100 border-t border-[var(--border)] px-5 py-4}
+
+/* ===== Figma alignment for Identification row ===== */
+@layer components {
+  /* an exact-width centered bar with even spacing and vertical centering */
+  .id-row { @apply mx-auto flex items-center justify-between gap-3; width: 1102px; min-height: 84px; }
+  .id-cell { @apply flex-shrink-0; }
+  .id-avatar { @apply mr-1; }
+  .id-mobile { width: 364px; }
+  .id-gender { width: 232px; }
+  .id-age    { width: 180px; }
+  .id-dob    { width: 374px; }
 }
-.toggle{ @apply relative inline-flex h-6 w-11 items-center rounded-full bg-slate-300 transition-colors; }
-.toggle[data-on="true"]{ @apply bg-blue-600; }
-.toggle-knob{ @apply inline-block h-5 w-5 transform rounded-full bg-white transition-transform translate-x-0.5; }
-.toggle[data-on="true"] .toggle-knob{ @apply translate-x-[22px]; }
+
+/* accessibility toggles (already used) */
+@layer components {
+  .toggle { @apply relative h-6 w-12 rounded-full border border-slate-300 bg-slate-200 transition; }
+  .toggle[data-on="true"] { @apply bg-blue-600 border-blue-600; }
+  .toggle-knob { @apply absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition; }
+  .toggle[data-on="true"] .toggle-knob { @apply translate-x-6; }
+}

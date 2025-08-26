@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Screen, Printer, IdCard, Check } from './Icons';
 
@@ -12,7 +11,7 @@ export default function SuccessScreen({ data }){
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">1</span>
             Incoming ABHA Consent
           </div>
-          <div className="ml-auto p-3"><button className="btn">✕</button></div>
+          <div className="ml-auto p-3"><button className="btn" aria-label="Close">✕</button></div>
         </div>
 
         <div className="p-6">
