@@ -14,7 +14,7 @@
 /* components */
 @layer components {
   /* card + top tabs */
-  /* .card { @apply bg-white border border-[var(--border)] rounded-xl shadow-[0_1px_2px_rgba(16,24,40,.06)] overflow-hidden; } */
+  .card { @apply bg-white border border-[var(--border)] rounded-xl shadow-[0_1px_2px_rgba(16,24,40,.06)] overflow-hidden; }
   .tab { @apply relative px-4 py-3 font-semibold text-slate-700; }
   .tab-active { @apply text-slate-900; }
   .tab-active::after { content:""; @apply absolute left-0 right-0 -bottom-px h-[3px] bg-violet-600; }
