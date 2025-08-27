@@ -116,6 +116,7 @@ export default function RegistrationForm() {
     const { ageYY, ageMM, ageDD } = values;
     const hasAny = !!ageYY || !!ageMM || !!ageDD;
 
+    // keep simple "age" (0–120) in sync with Year
     if (ageYY !== values.age) set("age", ageYY || "");
     if (!hasAny) return;
 
@@ -180,9 +181,10 @@ export default function RegistrationForm() {
     } else {
       if (values.age) next.age = validateField("age", values.age);
       if (values.dobYY && values.dobMM && values.dobDD) {
+        // ✅ use slashes to satisfy regex: YY/MM/DD or YYYY/MM/DD
         next.dob = validateField(
           "dob",
-          `${values.dobYY}-${values.dobMM}-${values.dobDD}`
+          `${values.dobYY}/${values.dobMM}/${values.dobDD}`
         );
       } else next.dob = "";
     }
@@ -213,21 +215,20 @@ export default function RegistrationForm() {
     return minimal && hasId && noErrors;
   }, [values, errors, idProofs]);
 
-  /* ---------- sanitize tiny boxes with blur validation (ONLY CHANGES BELOW) ---------- */
+  /* ---------- AGE & DOB INPUTS: type freely, clamp on blur ---------- */
+  // AGE
   const onAgeYY = (v) => set("ageYY", onlyDigits(v).slice(0, 3));
   const onAgeYYBlur = () => {
     if (values.ageYY === "") return;
     const n = clamp(parseInt(values.ageYY, 10), 0, 120);
     set("ageYY", String(isNaN(n) ? "" : n));
   };
-
   const onAgeMM = (v) => set("ageMM", onlyDigits(v).slice(0, 2));
   const onAgeMMBlur = () => {
     if (values.ageMM === "") return;
-    const n = clamp(parseInt(values.ageMM, 10), 0, 11); // 0–11 months for age
+    const n = clamp(parseInt(values.ageMM, 10), 0, 11); // 0–11 months
     set("ageMM", String(isNaN(n) ? "" : n));
   };
-
   const onAgeDD = (v) => set("ageDD", onlyDigits(v).slice(0, 2));
   const onAgeDDBlur = () => {
     if (values.ageDD === "") return;
@@ -235,6 +236,7 @@ export default function RegistrationForm() {
     set("ageDD", String(isNaN(n) ? "" : n));
   };
 
+  // DOB
   const onDobYY = (v) => set("dobYY", onlyDigits(v).slice(0, 4));
   const onDobYYBlur = () => {
     if (values.dobYY === "") return;
@@ -245,22 +247,17 @@ export default function RegistrationForm() {
     );
     set("dobYY", String(isNaN(year) ? "" : year));
   };
-
   const onDobMM = (v) => set("dobMM", onlyDigits(v).slice(0, 2));
   const onDobMMBlur = () => {
     if (values.dobMM === "") return;
     const n = clamp(parseInt(values.dobMM, 10), 1, 12);
     set("dobMM", isNaN(n) ? "" : pad2(n));
   };
-
   const onDobDD = (v) => set("dobDD", onlyDigits(v).slice(0, 2));
   const onDobDDBlur = () => {
     if (values.dobDD === "") return;
-    // Use provided Y/M if present; otherwise safe defaults to compute max days
-    const year =
-      parseInt(values.dobYY, 10) || new Date().getFullYear();
-    const monthIdx =
-      (parseInt(values.dobMM, 10) || 1) - 1; // zero-based
+    const year = parseInt(values.dobYY, 10) || new Date().getFullYear();
+    const monthIdx = (parseInt(values.dobMM, 10) || 1) - 1; // 0-based
     const maxDay = daysInMonth(year, clamp(monthIdx, 0, 11));
     const n = clamp(parseInt(values.dobDD, 10), 1, maxDay);
     set("dobDD", isNaN(n) ? "" : pad2(n));
