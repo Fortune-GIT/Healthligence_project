@@ -116,7 +116,6 @@ export default function RegistrationForm() {
     const { ageYY, ageMM, ageDD } = values;
     const hasAny = !!ageYY || !!ageMM || !!ageDD;
 
-    // keep simple "age" (0–120) in sync with Year
     if (ageYY !== values.age) set("age", ageYY || "");
     if (!hasAny) return;
 
@@ -181,7 +180,7 @@ export default function RegistrationForm() {
     } else {
       if (values.age) next.age = validateField("age", values.age);
       if (values.dobYY && values.dobMM && values.dobDD) {
-        // ✅ use slashes to satisfy regex: YY/MM/DD or YYYY/MM/DD
+        // regex expects YY/MM/DD or YYYY/MM/DD -> use slashes
         next.dob = validateField(
           "dob",
           `${values.dobYY}/${values.dobMM}/${values.dobDD}`
@@ -215,7 +214,7 @@ export default function RegistrationForm() {
     return minimal && hasId && noErrors;
   }, [values, errors, idProofs]);
 
-  /* ---------- AGE & DOB INPUTS: type freely, clamp on blur ---------- */
+  /* ---------- AGE & DOB INPUTS: free typing, clamp on blur ---------- */
   // AGE
   const onAgeYY = (v) => set("ageYY", onlyDigits(v).slice(0, 3));
   const onAgeYYBlur = () => {
@@ -261,6 +260,28 @@ export default function RegistrationForm() {
     const maxDay = daysInMonth(year, clamp(monthIdx, 0, 11));
     const n = clamp(parseInt(values.dobDD, 10), 1, maxDay);
     set("dobDD", isNaN(n) ? "" : pad2(n));
+  };
+
+  /* ---------- Uploaded files list (compact & Figma-like) ---------- */
+  const uploadedList = useMemo(() => {
+    const safeName = (f) =>
+      typeof f === "string" ? f : f?.name || f?.file?.name || "file";
+    return [
+      ...idProofs.map((f, idx) => ({ kind: "id", idx, name: safeName(f) })),
+      ...addressProofs.map((f, idx) => ({
+        kind: "address",
+        idx,
+        name: safeName(f),
+      })),
+    ];
+  }, [idProofs, addressProofs]);
+
+  const removeUploaded = (kind, idx) => {
+    if (kind === "id") {
+      setIdProofs((prev) => prev.filter((_, i) => i !== idx));
+    } else {
+      setAddressProofs((prev) => prev.filter((_, i) => i !== idx));
+    }
   };
 
   /* ---------- submit ---------- */
@@ -493,15 +514,65 @@ export default function RegistrationForm() {
             <option value="passport">Passport</option>
           </select>
 
-          {/* Uploaders (no internal Doc Type selects) */}
-          <FileUpload title="Upload Identity Proof" type="id" onChange={setIdProofs} />
-          <FileUpload title="Upload Address Proof" type="address" onChange={setAddressProofs} />
+          {/* Uploaders with icons */}
+          <FileUpload
+            title="Upload Identity Proof"
+            type="id"
+            icon="download"
+            onChange={setIdProofs}
+          />
+          <FileUpload
+            title="Upload Address Proof"
+            type="address"
+            icon="sliders"
+            onChange={setAddressProofs}
+          />
 
           <label className="ml-auto inline-flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="accent-blue-600" checked={kycVerified} onChange={(e) => setKycVerified(e.target.checked)} />
+            <input
+              type="checkbox"
+              className="accent-blue-600"
+              checked={kycVerified}
+              onChange={(e) => setKycVerified(e.target.checked)}
+            />
             KYC Verified
           </label>
         </div>
+
+        {/* Compact uploaded list (Figma-like) */}
+        {uploadedList.length > 0 && (
+          <div className="mt-2 w-[331px] overflow-hidden rounded-md border border-slate-200 bg-white">
+            {uploadedList.map((f, i) => (
+              <div
+                key={`${f.kind}-${f.idx}`}
+                className="flex items-center gap-2 border-b border-slate-200 px-2 py-1.5 last:border-b-0"
+              >
+                <input
+                  type="checkbox"
+                  checked
+                  readOnly
+                  className="accent-blue-600 h-3.5 w-3.5"
+                />
+                <span
+                  className="max-w-[140px] truncate text-xs text-blue-600"
+                  title={f.name}
+                >
+                  {f.name}
+                </span>
+                <span className="text-[10px] text-slate-500">Uploaded</span>
+                <button
+                  type="button"
+                  className="ml-auto text-slate-400 hover:text-red-600 text-sm"
+                  aria-label="Remove"
+                  onClick={() => removeUploaded(f.kind, f.idx)}
+                  title="Remove"
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ===== Preferences ===== */}
@@ -511,7 +582,12 @@ export default function RegistrationForm() {
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-[600px]">
             <label className="inline-flex items-center gap-2 text-sm text-slate-800">
-              <input type="checkbox" className="accent-blue-600" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="accent-blue-600"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
               Consent for Medical Research
             </label>
             <div className="mt-2 text-xs text-slate-500">
@@ -520,13 +596,23 @@ export default function RegistrationForm() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-slate-600">Communication Preferences</label>
-            <select className="select w-40" value={comm} onChange={(e) => setComm(e.target.value)}>
+            <label className="mb-1 block text-xs text-slate-600">
+              Communication Preferences
+            </label>
+            <select
+              className="select w-40"
+              value={comm}
+              onChange={(e) => setComm(e.target.value)}
+            >
               {commPrefs.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
-            <div className="mt-2 text-xs text-slate-500">Default Communication Language</div>
+            <div className="mt-2 text-xs text-slate-500">
+              Default Communication Language
+            </div>
           </div>
         </div>
       </div>

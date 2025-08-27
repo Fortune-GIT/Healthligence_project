@@ -1,72 +1,97 @@
-import React, { useRef, useState } from "react";
-import { Upload } from "./Icons";
+import React, { useRef } from "react";
 
-// Only allow JPG/JPEG/PDF
-const ACCEPT = ["image/jpeg", "image/jpg", "application/pdf"];
-
+/**
+ * Lightweight uploader used by RegistrationForm.
+ * - Does NOT render any uploaded filenames.
+ * - Accepts only JPG/JPEG/PDF.
+ * - Calls the parent's setter (passed via `onChange`) to append files.
+ *
+ * Props:
+ *  - title: string (button label)
+ *  - type: "id" | "address" (semantic only)
+ *  - icon: "download" | "sliders" | ReactNode (optional)
+ *  - onChange: React setState function for the corresponding files array
+ */
 export default function FileUpload({
   title = "Upload",
-  type = "id",                // "id" or "address" 
-  onChange,                   // (filesArray) => void
+  type = "id",
+  icon = "download",
+  onChange,
 }) {
   const inputRef = useRef(null);
-  const [files, setFiles] = useState([]); // [{name, type, size, fileObject}]
 
   const openPicker = () => inputRef.current?.click();
 
-  const handleFiles = (fileList) => {
-    const selected = Array.from(fileList || []);
-    const valid = selected.filter((f) => ACCEPT.includes(f.type));
-    if (valid.length !== selected.length) {
-      alert("Only JPG/JPEG or PDF files are allowed.");
+  const handleFiles = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Filter to allowed types only (jpg/jpeg/pdf)
+    const accepted = files.filter((f) => /\.(jpe?g|pdf)$/i.test(f.name || ""));
+    if (accepted.length === 0) return;
+
+    // Append to the existing list (parent passed a setter)
+    if (typeof onChange === "function") {
+      onChange((prev) => [...(Array.isArray(prev) ? prev : []), ...accepted]);
     }
-    const next = [
-      ...files,
-      ...valid.map((f) => ({ name: f.name, type: f.type, size: f.size, file: f })),
-    ];
-    setFiles(next);
-    onChange?.(next);
+
+    // reset input so same file can be selected again if needed
+    e.target.value = "";
   };
 
-  const removeAt = (idx) => {
-    const next = files.filter((_, i) => i !== idx);
-    setFiles(next);
-    onChange?.(next);
+  const renderIcon = () => {
+    if (React.isValidElement(icon)) return icon;
+
+    // Built-in minimalist icons to mirror Figma tone
+    switch (icon) {
+      case "sliders":
+        // three vertical sliders
+        return (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="mr-2"
+          >
+            <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" stroke="#334155" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="4" cy="11" r="2.2" fill="white" stroke="#334155" strokeWidth="1.5"/>
+            <circle cx="12" cy="9" r="2.2" fill="white" stroke="#334155" strokeWidth="1.5"/>
+            <circle cx="20" cy="13" r="2.2" fill="white" stroke="#334155" strokeWidth="1.5"/>
+          </svg>
+        );
+      case "download":
+      default:
+        // tray with arrow (upload/attach vibe)
+        return (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="mr-2"
+          >
+            <path d="M12 3v10m0 0l-3.5-3.5M12 13l3.5-3.5" stroke="#334155" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M4 15v3a3 3 0 003 3h10a3 3 0 003-3v-3" stroke="#334155" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        );
+    }
   };
 
   return (
-    <div className="inline-flex items-center gap-3">
+    <div className="inline-flex items-center">
       <input
         ref={inputRef}
         type="file"
+        accept=".jpg,.jpeg,.pdf"
+        multiple
         className="hidden"
-        accept=".jpg,.jpeg,application/pdf"
-        onChange={(e) => handleFiles(e.target.files)}
+        onChange={handleFiles}
       />
-
-      <button type="button" className="btn" onClick={openPicker}>
-        <Upload className="icon-muted" />
+      <button type="button" onClick={openPicker} className="btn" title={title}>
+        {renderIcon()}
         {title}
       </button>
-
-      {/* filenames with remove */}
-      <div className="flex flex-wrap items-center gap-3">
-        {files.map((f, i) => (
-          <div key={`${f.name}-${i}`} className="inline-flex items-center gap-2 text-sm">
-            <span className="px-2 py-1 rounded-md border border-slate-200 bg-white">
-              {f.name}
-            </span>
-            <button
-              type="button"
-              className="text-red-600 hover:underline"
-              onClick={() => removeAt(i)}
-              aria-label={`remove ${f.name}`}
-            >
-              remove
-            </button>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
