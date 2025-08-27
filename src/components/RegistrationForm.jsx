@@ -9,7 +9,7 @@ const genders = ["Female", "Male", "Others"];
 const commPrefs = ["Odia", "English", "Hindi"];
 const INNER_W = "w-full max-w-[1189px]";
 
-/* ---------- Age <-> DOB helpers ---------- */
+/*  Age , DOB helpers  */
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -111,7 +111,7 @@ export default function RegistrationForm() {
 
   const set = (name, val) => setValues((v) => ({ ...v, [name]: val }));
 
-  /* ---------- Age parts -> DOB (and sync "age") ---------- */
+  /*  Age parts, DOB (and sync "age")  */
   useEffect(() => {
     const { ageYY, ageMM, ageDD } = values;
     const hasAny = !!ageYY || !!ageMM || !!ageDD;
@@ -129,7 +129,7 @@ export default function RegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.ageYY, values.ageMM, values.ageDD]);
 
-  /* ---------- DOB parts -> Age parts (and sync "age") ---------- */
+  /*  DOB parts, Age parts (and sync "age")  */
   useEffect(() => {
     const { dobYY, dobMM, dobDD } = values;
     if (!dobYY && !dobMM && !dobDD) return;
@@ -147,7 +147,7 @@ export default function RegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dobYY, values.dobMM, values.dobDD]);
 
-  /* ---------- direct DOB string change -> sync age ---------- */
+  /*  direct DOB string change -> sync age  */
   useEffect(() => {
     if (!values.dob) return;
     const p = agePartsFromDOB(values.dob);
@@ -158,7 +158,7 @@ export default function RegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dob]);
 
-  /* ---------- validation ---------- */
+  /*  validation  */
   const onBlurField =
     (name) =>
     (e) =>
@@ -213,41 +213,60 @@ export default function RegistrationForm() {
     return minimal && hasId && noErrors;
   }, [values, errors, idProofs]);
 
-  /* ---------- sanitize tiny boxes ---------- */
-  const onAgeYY = (v) => {
-    const d = onlyDigits(v);
-    const n = d === "" ? "" : String(clamp(parseInt(d, 10), 0, 120));
-    set("ageYY", n);
-  };
-  const onAgeMM = (v) => {
-    const d = onlyDigits(v);
-    const n = d === "" ? "" : String(clamp(parseInt(d, 10), 0, 11));
-    set("ageMM", n);
-  };
-  const onAgeDD = (v) => {
-    const d = onlyDigits(v);
-    const n = d === "" ? "" : String(clamp(parseInt(d, 10), 0, 31));
-    set("ageDD", n);
+  /*  sanitize tiny boxes with blur validation (ONLY CHANGES BELOW)  */
+  const onAgeYY = (v) => set("ageYY", onlyDigits(v).slice(0, 3));
+  const onAgeYYBlur = () => {
+    if (values.ageYY === "") return;
+    const n = clamp(parseInt(values.ageYY, 10), 0, 120);
+    set("ageYY", String(isNaN(n) ? "" : n));
   };
 
-  const onDobYY = (v) => {
-    const d = onlyDigits(v).slice(0, 4);
+  const onAgeMM = (v) => set("ageMM", onlyDigits(v).slice(0, 2));
+  const onAgeMMBlur = () => {
+    if (values.ageMM === "") return;
+    const n = clamp(parseInt(values.ageMM, 10), 0, 11); // 0–11 months for age
+    set("ageMM", String(isNaN(n) ? "" : n));
+  };
+
+  const onAgeDD = (v) => set("ageDD", onlyDigits(v).slice(0, 2));
+  const onAgeDDBlur = () => {
+    if (values.ageDD === "") return;
+    const n = clamp(parseInt(values.ageDD, 10), 0, 31);
+    set("ageDD", String(isNaN(n) ? "" : n));
+  };
+
+  const onDobYY = (v) => set("dobYY", onlyDigits(v).slice(0, 4));
+  const onDobYYBlur = () => {
+    if (values.dobYY === "") return;
+    const year = clamp(
+      parseInt(values.dobYY, 10),
+      1900,
+      new Date().getFullYear()
+    );
+    set("dobYY", String(isNaN(year) ? "" : year));
+  };
+
+  const onDobMM = (v) => set("dobMM", onlyDigits(v).slice(0, 2));
+  const onDobMMBlur = () => {
+    if (values.dobMM === "") return;
+    const n = clamp(parseInt(values.dobMM, 10), 1, 12);
+    set("dobMM", isNaN(n) ? "" : pad2(n));
+  };
+
+  const onDobDD = (v) => set("dobDD", onlyDigits(v).slice(0, 2));
+  const onDobDDBlur = () => {
+    if (values.dobDD === "") return;
+    // Use provided Y/M if present; otherwise safe defaults to compute max days
     const year =
-      d === "" ? "" : String(clamp(parseInt(d, 10), 1900, new Date().getFullYear()));
-    set("dobYY", year);
-  };
-  const onDobMM = (v) => {
-    const d = onlyDigits(v);
-    const n = d === "" ? "" : pad2(clamp(parseInt(d, 10), 1, 12));
-    set("dobMM", n);
-  };
-  const onDobDD = (v) => {
-    const d = onlyDigits(v);
-    const n = d === "" ? "" : pad2(clamp(parseInt(d, 10), 1, 31));
-    set("dobDD", n);
+      parseInt(values.dobYY, 10) || new Date().getFullYear();
+    const monthIdx =
+      (parseInt(values.dobMM, 10) || 1) - 1; // zero-based
+    const maxDay = daysInMonth(year, clamp(monthIdx, 0, 11));
+    const n = clamp(parseInt(values.dobDD, 10), 1, maxDay);
+    set("dobDD", isNaN(n) ? "" : pad2(n));
   };
 
-  /* ---------- submit ---------- */
+  /*  submit  */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateRequired()) return;
@@ -317,7 +336,7 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* ===== Identification Details ===== */}
+      {/*  Identification Details */}
       <div className={`mb-2 ${INNER_W}`}>
         <div className="badge">Identification Details</div>
       </div>
@@ -399,9 +418,9 @@ export default function RegistrationForm() {
             <div className="w-[180px]">
               <FormField label="Age*" error={errors.age}>
                 <div className="flex items-end gap-2">
-                  <TinyBox label="YY" value={values.ageYY} onChange={onAgeYY} inputMode="numeric" maxLength={3} />
-                  <TinyBox label="MM" value={values.ageMM} onChange={onAgeMM} inputMode="numeric" maxLength={2} />
-                  <TinyBox label="DD" value={values.ageDD} onChange={onAgeDD} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="YY" value={values.ageYY} onChange={onAgeYY} onBlur={onAgeYYBlur} inputMode="numeric" maxLength={3} />
+                  <TinyBox label="MM" value={values.ageMM} onChange={onAgeMM} onBlur={onAgeMMBlur} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="DD" value={values.ageDD} onChange={onAgeDD} onBlur={onAgeDDBlur} inputMode="numeric" maxLength={2} />
                 </div>
               </FormField>
             </div>
@@ -415,9 +434,9 @@ export default function RegistrationForm() {
             <div className="w-[180px]">
               <FormField label="Date of Birth*" error={errors.dob}>
                 <div className="flex items-end gap-2">
-                  <TinyBox label="YY" value={values.dobYY} onChange={onDobYY} inputMode="numeric" maxLength={4} />
-                  <TinyBox label="MM" value={values.dobMM} onChange={onDobMM} inputMode="numeric" maxLength={2} />
-                  <TinyBox label="DD" value={values.dobDD} onChange={onDobDD} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="YY" value={values.dobYY} onChange={onDobYY} onBlur={onDobYYBlur} inputMode="numeric" maxLength={4} />
+                  <TinyBox label="MM" value={values.dobMM} onChange={onDobMM} onBlur={onDobMMBlur} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="DD" value={values.dobDD} onChange={onDobDD} onBlur={onDobDDBlur} inputMode="numeric" maxLength={2} />
                 </div>
               </FormField>
             </div>
@@ -425,7 +444,7 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* ===== Contact Details ===== */}
+      {/*  Contact Details  */}
       <div className={`mt-6 ${INNER_W}`}>
         <div className="badge">Contact Details</div>
 
@@ -459,7 +478,7 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* ===== KYC Documents (single line) ===== */}
+      {/* KYC Documents */}
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">KYC Documents ( Optional )</div>
 

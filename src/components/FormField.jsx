@@ -1,6 +1,6 @@
 import React from "react";
 
-/* wrapper for non-box controls (e.g., Gender, Age, DOB) */
+/* wrapper for non-box controls (Gender, Age, DOB) */
 export default function FormField({
   label,
   children,

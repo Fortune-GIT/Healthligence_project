@@ -6,7 +6,7 @@ const ACCEPT = ["image/jpeg", "image/jpg", "application/pdf"];
 
 export default function FileUpload({
   title = "Upload",
-  type = "id",                // "id" or "address" (for your own usage if needed)
+  type = "id",                // "id" or "address" 
   onChange,                   // (filesArray) => void
 }) {
   const inputRef = useRef(null);

@@ -43,9 +43,9 @@
     background-size: 20px 20px;
   }
 
-  /* floating input (label inside box, like Figma) */
+  /* floating input (label inside box) */
   .fl { @apply relative; }
-  .fl-input { @apply input pt-[18px]; } /* lift content to make room for label */
+  .fl-input { @apply input pt-[18px]; } 
   .fl-label { @apply pointer-events-none absolute left-3 top-[6px] text-[11px] leading-none font-medium text-slate-500; }
   .fl-right { @apply absolute right-1 top-1/2 -translate-y-1/2; }
 
@@ -82,11 +82,11 @@
   .id-dob    { width: 374px; }
 }
 
-/* === Only what you asked: KYC row + Preferences alignment === */
+/* KYC row + Preferences alignment  */
 @layer components {
   /* single-line KYC row */
   .kyc-line     { @apply flex items-center gap-4; }
-  .kyc-doc-type { @apply select w-[110px]; } /* compact like Figma */
+  .kyc-doc-type { @apply select w-[110px]; } 
   .kyc-verify   { @apply ml-auto inline-flex items-center gap-2 text-sm text-slate-600; }
 
   /* preferences: two columns, aligned with helper text */
@@ -147,7 +147,7 @@
     background-size: 20px 20px;
   }
 
-  /* floating input (label inside box, like Figma) */
+  /* floating input (label inside box) */
   .fl { @apply relative; }
   .fl-input { @apply input pt-[18px]; } /* lift content to make room for label */
   .fl-label { @apply pointer-events-none absolute left-3 top-[6px] text-[11px] leading-none font-medium text-slate-500; }
@@ -186,7 +186,7 @@
   .id-dob    { width: 374px; }
 }
 
-/* === Only what you asked: KYC row + Preferences alignment === */
+/* KYC row + Preferences alignment  */
 @layer components {
   /* single-line KYC row */
   .kyc-line     { @apply flex items-center gap-4; }
