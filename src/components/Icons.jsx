@@ -107,7 +107,6 @@ export const Check = (p) => (
   </svg>
 );
 
-/* small calendar icon used near DOB */
 export const Calendar = (p) => (
   <svg
     className={`icon ${p.className || ""}`}

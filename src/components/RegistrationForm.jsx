@@ -6,10 +6,13 @@ import {
   computeDOBFromAge,
   computeAgeFromDOB,
 } from "../utils/validation";
-import { Camera, Calendar } from "./Icons";
+import { Camera } from "./Icons";
 
 const genders = ["Female", "Male", "Others"];
 const commPrefs = ["Odia", "English", "Hindi"];
+
+// Inner working width per Figma, aligned to the same left rail as the tabs/pills
+const INNER_W = "w-full max-w-[1189px]";
 
 export default function RegistrationForm({ onSuccess }) {
   const [values, setValues] = useState({
@@ -45,9 +48,11 @@ export default function RegistrationForm({ onSuccess }) {
   const [idProofs, setIdProofs] = useState([]);
   const [addressProofs, setAddressProofs] = useState([]);
   const [kycVerified, setKycVerified] = useState(false);
+  const [kycDocType, setKycDocType] = useState(""); // single Doc Type (others removed)
 
   const set = (name, val) => setValues((v) => ({ ...v, [name]: val }));
 
+  // keep helpers in sync
   useEffect(() => {
     if (values.age && !values.dob) {
       const dob = computeDOBFromAge(values.age);
@@ -143,6 +148,7 @@ export default function RegistrationForm({ onSuccess }) {
       kycVerified,
       idProofs,
       addressProofs,
+      kycDocType,
       uhid: `IGH-${rand(7)}`,
       billNo: `FB${rand(8)}`,
       txnId: `TRX${rand(10)}`,
@@ -150,69 +156,89 @@ export default function RegistrationForm({ onSuccess }) {
   };
 
   return (
-    <div className="container mx-auto px-8 py-6">
-      
-        {/* top tabs */}
-        <div className="flex items-center border-b border-slate-200 bg-white">
-          <div className="tab tab-active">New Patient Registration</div>
-          <div className="tab flex items-center gap-2">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-              1
+    <div className="mx-auto max-w-[1280px] px-6 py-6">
+      {/* header */}
+      <div className="flex items-center border-b border-slate-200 pb-2">
+        <div className="tab tab-active">New Patient Registration</div>
+        <div className="tab flex items-center gap-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+            1
+          </span>
+          Incoming ABHA Consent
+        </div>
+        <div className="ml-auto pr-2">
+          <button type="button" className="btn-icon bg-muted-2" aria-label="Close">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* pills — muted strip like Figma */}
+      <div className={`${INNER_W} mt-2 mb-5`}>
+        <div className="pillbar w-fit rounded-lg bg-muted p-1">
+          <button type="button" className="pill pill-active">Regular</button>
+          <button type="button" className="pill">Quick</button>
+          <button type="button" className="pill">Import from ABHA</button>
+          <button type="button" className="pill pill-disabled">Scan Documents</button>
+        </div>
+      </div>
+
+      {/* ===== Identification Details ===== */}
+      <div className={`mb-2 ${INNER_W}`}>
+        <div className="badge">Identification Details</div>
+      </div>
+
+      {/* 3-column grid: [56px avatar] [mobile+names] [fixed 630px right-group] */}
+      <div
+        className={`${INNER_W} grid items-start gap-3`}
+        style={{ gridTemplateColumns: "56px minmax(440px,1fr) 630px" }}
+      >
+        {/* avatar */}
+        <div className="row-span-2">
+          <div className="relative h-14 w-14 overflow-hidden rounded-full border border-slate-200">
+            <img
+              src="https://i.pravatar.cc/100?img=32"
+              alt="avatar"
+              className="h-full w-full object-cover"
+            />
+            <span className="absolute -right-1 -bottom-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+              <Camera className="h-4 w-4 text-slate-600" />
             </span>
-            Incoming ABHA Consent
-          </div>
-          <div className="ml-auto p-3">
-            <button type="button" className="btn" aria-label="Close">
-              ✕
-            </button>
           </div>
         </div>
 
-        <form className="p-5" onSubmit={handleSubmit} noValidate>
-          {/* pills */}
-          <div className="mb-4">
-            <div className="pillbar">
-              <button type="button" className="pill pill-active">Regular</button>
-              <button type="button" className="pill">Quick</button>
-              <button type="button" className="pill">Import from ABHA</button>
-              <button type="button" className="pill pill-disabled">Scan Documents</button>
-            </div>
+        {/* MOBILE + NAMES (left column) */}
+        <div className="grid gap-3">
+          <FloatingInput
+            label="Enter Mobile Number *"
+            value={values.mobile}
+            onChange={(v) => set("mobile", v)}
+            onBlur={onBlurField("mobile")}
+            error={errors.mobile}
+          />
+          <div className="grid gap-3" style={{ gridTemplateColumns: "232px minmax(200px,1fr)" }}>
+            <FloatingInput
+              label="First Name*"
+              value={values.firstName}
+              onChange={(v) => set("firstName", v)}
+              onBlur={onBlurField("firstName")}
+              error={errors.firstName}
+            />
+            <FloatingInput
+              label="Last Name*"
+              value={values.lastName}
+              onChange={(v) => set("lastName", v)}
+              onBlur={onBlurField("lastName")}
+              error={errors.lastName}
+            />
           </div>
+        </div>
 
-          {/* ===== Identification Details ===== */}
-          <div className="mb-2">
-            <div className="badge">Identification Details</div>
-          </div>
-
-          {/* Centered row that mirrors the Figma “Hug 84px / gap 12px / space-between / width 1102px” */}
-          <div className="id-row">
-            {/* avatar */}
-            <div className="id-cell id-avatar">
-              <div className="relative h-14 w-14 overflow-hidden rounded-full border border-slate-200">
-                <img
-                  src="https://i.pravatar.cc/100?img=32"
-                  alt="avatar"
-                  className="h-full w-full object-cover"
-                />
-                <span className="avatar-badge">
-                  <Camera />
-                </span>
-              </div>
-            </div>
-
-            {/* mobile */}
-            <div className="id-cell id-mobile">
-              <FloatingInput
-                label="Enter Mobile Number *"
-                value={values.mobile}
-                onChange={(v) => set("mobile", v)}
-                onBlur={onBlurField("mobile")}
-                error={errors.mobile}
-              />
-            </div>
-
-            {/* gender */}
-            <div className="id-cell id-gender">
+        {/* RIGHT GROUP (fixed width like Figma) */}
+        <div className="w-[630px]">
+          <div className="grid grid-cols-3 gap-6 items-start">
+            {/* Gender (232px) */}
+            <div className="w-[232px]">
               <FormField label="Gender*">
                 <div className="segmented">
                   {genders.map((g, i) => {
@@ -221,11 +247,7 @@ export default function RegistrationForm({ onSuccess }) {
                       <button
                         key={g}
                         type="button"
-                        className={`segmented-item ${
-                          active ? "segmented-item-active" : ""
-                        } ${i === 0 ? "rounded-l-md" : ""} ${
-                          i === genders.length - 1 ? "rounded-r-md" : ""
-                        }`}
+                        className={`segmented-item ${active ? "segmented-item-active" : ""} ${i===0?"rounded-l-md":""} ${i===genders.length-1?"rounded-r-md":""}`}
                         onClick={() => set("gender", g)}
                       >
                         {g}
@@ -236,289 +258,229 @@ export default function RegistrationForm({ onSuccess }) {
               </FormField>
             </div>
 
-            {/* age */}
-            <div className="id-cell id-age">
+            {/* Age (YY/MM/DD) */}
+            <div>
               <FormField label="Age*" error={errors.age}>
                 <div className="flex items-end gap-2">
-                  <TinyBox
-                    label="YY"
-                    value={values.ageYY}
-                    onChange={(v) => {
-                      set("ageYY", v);
-                      set("age", v);
-                    }}
-                    inputMode="numeric"
-                    maxLength={3}
-                  />
-                  <TinyBox
-                    label="MM"
-                    value={values.ageMM}
-                    onChange={(v) => set("ageMM", v)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
-                  <TinyBox
-                    label="DD"
-                    value={values.ageDD}
-                    onChange={(v) => set("ageDD", v)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
+                  <TinyBox label="YY" value={values.ageYY} onChange={(v) => { set("ageYY", v); set("age", v); }} inputMode="numeric" maxLength={3} />
+                  <TinyBox label="MM" value={values.ageMM} onChange={(v) => set("ageMM", v)} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="DD" value={values.ageDD} onChange={(v) => set("ageDD", v)} inputMode="numeric" maxLength={2} />
                 </div>
               </FormField>
             </div>
 
-            {/* DOB */}
-            <div className="id-cell id-dob">
+            {/* DOB (YY/MM/DD) — calendar removed */}
+            <div>
               <FormField label="Date of Birth*" error={errors.dob}>
-                <div className="flex items-end gap-3">
-                  <div className="flex items-end gap-2">
-                    <TinyBox
-                      label="YY"
-                      value={values.dobYY}
-                      onChange={(v) => set("dobYY", v)}
-                      inputMode="numeric"
-                      maxLength={4}
-                    />
-                    <TinyBox
-                      label="MM"
-                      value={values.dobMM}
-                      onChange={(v) => set("dobMM", v)}
-                      inputMode="numeric"
-                      maxLength={2}
-                    />
-                    <TinyBox
-                      label="DD"
-                      value={values.dobDD}
-                      onChange={(v) => set("dobDD", v)}
-                      inputMode="numeric"
-                      maxLength={2}
-                    />
-                  </div>
-
-                  <span className="pb-0.5 text-sm text-slate-500">OR</span>
-
-                  <div className="relative">
-                    <input
-                      className="input w-36 text-center"
-                      placeholder="YYYY-MM-DD"
-                      value={values.dob}
-                      onChange={(e) => set("dob", e.target.value)}
-                      onBlur={onBlurField("dob")}
-                      aria-label="DOB full"
-                    />
-                    <Calendar className="icon-muted pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
-                  </div>
+                <div className="flex items-end gap-2">
+                  <TinyBox label="YY" value={values.dobYY} onChange={(v) => set("dobYY", v)} inputMode="numeric" maxLength={4} />
+                  <TinyBox label="MM" value={values.dobMM} onChange={(v) => set("dobMM", v)} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="DD" value={values.dobDD} onChange={(v) => set("dobDD", v)} inputMode="numeric" maxLength={2} />
                 </div>
               </FormField>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* ===== Contact Details (unchanged grid) ===== */}
-          <div className="grid grid-cols-12 gap-4 mt-6">
-            <div className="col-span-12">
-              <div className="badge">Contact Details</div>
-            </div>
+      {/* ===== Contact Details (exact Figma layout) ===== */}
+      <div className={`mt-6 ${INNER_W}`}>
+        <div className="badge">Contact Details</div>
 
-            <div className="col-span-3">
-              <FloatingInput
-                label="Address Line 1 *"
-                value={values.address1}
-                onChange={(v) => set("address1", v)}
+        {/* Row 1: Address1, Address2, PIN, Area, City, District, State, IN chip */}
+        <div
+          className="mt-2 grid gap-4"
+          style={{
+            gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 56px",
+          }}
+        >
+          <FloatingInput
+            label="Address Line 1 *"
+            value={values.address1}
+            onChange={(v) => set("address1", v)}
+          />
+          <FloatingInput
+            label="Address Line 2 *"
+            value={values.address2}
+            onChange={(v) => set("address2", v)}
+          />
+          <FloatingInput
+            label="PIN*"
+            value={values.pin}
+            onChange={(v) => set("pin", v)}
+            onBlur={onBlurField("pin")}
+            error={errors.pin}
+          />
+          <FloatingInput
+            label="Select Area*"
+            value={values.area}
+            onChange={(v) => set("area", v)}
+          />
+          <FloatingInput
+            label="City"
+            value={values.city}
+            onChange={(v) => set("city", v)}
+          />
+          <FloatingInput
+            label="District*"
+            value={values.district}
+            onChange={(v) => set("district", v)}
+          />
+          {/* State field (no right addon) */}
+          <FloatingInput
+            label="State*"
+            value={values.state}
+            onChange={(v) => set("state", v)}
+          />
+          {/* External IN chip (outside the state input) */}
+          <div className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-600">
+            IN
+          </div>
+        </div>
+
+        {/* Row 2: Primary Reg No, Next Kin, Email */}
+        <div
+          className="mt-4 grid gap-4"
+          style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
+        >
+          <FloatingInput
+            label="Primary Registered Number*"
+            value={values.primaryRegNo}
+            onChange={(v) => set("primaryRegNo", v)}
+          />
+          <FloatingInput
+            label="Next Kin Contact No. *"
+            value={values.nextKin}
+            onChange={(v) => set("nextKin", v)}
+            onBlur={onBlurField("nextKin")}
+            error={errors.nextKin}
+          />
+          <FloatingInput
+            label="Email"
+            value={values.email}
+            onChange={(v) => set("email", v)}
+            onBlur={onBlurField("email")}
+            error={errors.email}
+          />
+        </div>
+
+        {/* Row 3: Attendant Name, Attendant Relationship */}
+        <div
+          className="mt-4 grid gap-4"
+          style={{ gridTemplateColumns: "1fr 1fr" }}
+        >
+          <FloatingInput
+            label="Attendant Name"
+            value={values.attendantName}
+            onChange={(v) => set("attendantName", v)}
+          />
+          <FloatingInput
+            label="Attendant Relationship"
+            value={values.attendantRel}
+            onChange={(v) => set("attendantRel", v)}
+          />
+        </div>
+      </div>
+
+      {/* ===== KYC Documents (single-line like Figma) ===== */}
+      <div className={`${INNER_W} mt-6`}>
+        <div className="badge">KYC Documents ( Optional )</div>
+
+        <div className="kyc-line mt-2">
+          {/* SINGLE Doc Type (the extra one is removed) */}
+          <select
+            className="kyc-doc-type"
+            aria-label="Doc type"
+            value={kycDocType}
+            onChange={(e) => setKycDocType(e.target.value)}
+          >
+            <option value="">Doc Type</option>
+            <option value="aadhar">Aadhar card</option>
+            <option value="pan">PAN card</option>
+            <option value="dl">Driving licence</option>
+            <option value="passport">Passport</option>
+          </select>
+
+          {/* Upload Identity Proof */}
+          <FileUpload title="Upload Identity Proof" type="id" onChange={setIdProofs} />
+
+          {/* Upload Address Proof */}
+          <FileUpload title="Upload Address Proof" type="address" onChange={setAddressProofs} />
+
+          {/* KYC Verified (right side) */}
+          <label className="kyc-verify">
+            <input
+              type="checkbox"
+              className="accent-blue-600"
+              checked={kycVerified}
+              onChange={(e) => setKycVerified(e.target.checked)}
+            />
+            KYC Verified
+          </label>
+        </div>
+      </div>
+
+      {/* ===== Preferences (left: consent checkbox; right: communication) ===== */}
+      <div className={`${INNER_W} mt-6`}>
+        <div className="badge">Preferences</div>
+
+        <div className="prefs-line mt-2">
+          {/* Consent for Medical Research — checkbox per requirements */}
+          <div className="prefs-consent">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-800">
+              <input
+                type="checkbox"
+                className="accent-blue-600"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
               />
-            </div>
-
-            <div className="col-span-3">
-              <FloatingInput
-                label="Address Line 2 *"
-                value={values.address2}
-                onChange={(v) => set("address2", v)}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <FloatingInput
-                label="PIN*"
-                value={values.pin}
-                onChange={(v) => set("pin", v)}
-                onBlur={onBlurField("pin")}
-                error={errors.pin}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <FloatingInput
-                label="Select Area*"
-                value={values.area}
-                onChange={(v) => set("area", v)}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <FloatingInput
-                label="City"
-                value={values.city}
-                onChange={(v) => set("city", v)}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <FloatingInput
-                label="District*"
-                value={values.district}
-                onChange={(v) => set("district", v)}
-              />
-            </div>
-
-            <div className="col-span-3">
-              <FloatingInput
-                label="State*"
-                value={values.state}
-                onChange={(v) => set("state", v)}
-                rightAddon={
-                  <div className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-600">
-                    IN
-                  </div>
-                }
-              />
-            </div>
-
-            <div className="col-span-5">
-              <FloatingInput
-                label="Primary Registered Number*"
-                value={values.primaryRegNo}
-                onChange={(v) => set("primaryRegNo", v)}
-              />
-            </div>
-
-            <div className="col-span-5">
-              <FloatingInput
-                label="Email"
-                value={values.email}
-                onChange={(v) => set("email", v)}
-                onBlur={onBlurField("email")}
-                error={errors.email}
-              />
-            </div>
-
-            <div className="col-span-3">
-              <FloatingInput
-                label="Next Kin Contact No. *"
-                value={values.nextKin}
-                onChange={(v) => set("nextKin", v)}
-                onBlur={onBlurField("nextKin")}
-                error={errors.nextKin}
-              />
-            </div>
-
-            <div className="col-span-3">
-              <FloatingInput
-                label="Attendant Name"
-                value={values.attendantName}
-                onChange={(v) => set("attendantName", v)}
-              />
-            </div>
-
-            <div className="col-span-4">
-              <FloatingInput
-                label="Attendant Relationship"
-                value={values.attendantRel}
-                onChange={(v) => set("attendantRel", v)}
-              />
-            </div>
-
-            {/* KYC */}
-            <div className="col-span-12">
-              <div className="badge">KYC Documents ( Optional )</div>
-            </div>
-
-            <div className="col-span-6">
-              <select className="select mb-2 w-64" aria-label="Doc type">
-                <option>Doc Type</option>
-                <option>Aadhar card</option>
-                <option>PAN card</option>
-                <option>Driving licence</option>
-                <option>Passport</option>
-              </select>
-            </div>
-
-            <FileUpload title=" " type="id" onChange={setIdProofs} />
-
-            <div className="col-span-6">
-              <FileUpload title=" " type="address" onChange={setAddressProofs} />
-              <div className="mt-2 text-xs text-slate-600">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={kycVerified}
-                    onChange={(e) => setKycVerified(e.target.checked)}
-                  />
-                  KYC Verified
-                </label>
-              </div>
-            </div>
-
-            {/* Preferences */}
-            <div className="col-span-12">
-              <div className="badge">Preferences</div>
-            </div>
-
-            <div className="col-span-6">
-              <div className="flex items-center gap-4">
-                <span className="text-sm">Consent for Medical Research</span>
-                <button
-                  type="button"
-                  className="toggle"
-                  data-on={consent}
-                  onClick={() => setConsent((v) => !v)}
-                  aria-label="Consent toggle"
-                >
-                  <span className="toggle-knob" />
-                </button>
-              </div>
-              <div className="mt-2 text-xs text-slate-500">
-                These cookies are essential in order to use the website and use
-                its features.
-              </div>
-            </div>
-
-            <div className="col-span-6">
-              <label className="mb-1 block text-xs text-slate-600">
-                Communication Preferences
-              </label>
-              <select
-                className="select w-40"
-                value={comm}
-                onChange={(e) => setComm(e.target.value)}
-              >
-                {commPrefs.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2 text-xs text-slate-500">
-                Default Communication Language
-              </div>
+              Consent for Medical Research
+            </label>
+            <div className="mt-2 text-xs text-slate-500">
+              These cookies are essential in order to use the website and use its features.
             </div>
           </div>
 
-          <div className="footer-strip mt-8 -mx-5">
-            <div className="flex items-center justify-between">
-              <div className="text-sm">Registration Charges : 200</div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={!canSubmit}
-                >
-                  Collect Payment &amp; Register
-                </button>
-                <button type="button" className="btn">Cancel</button>
-              </div>
+          {/* Communication Preferences */}
+          <div className="prefs-comm">
+            <label className="mb-1 block text-xs text-slate-600">
+              Communication Preferences
+            </label>
+            <select
+              className="select w-40"
+              value={comm}
+              onChange={(e) => setComm(e.target.value)}
+            >
+              {commPrefs.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <div className="mt-2 text-xs text-slate-500">
+              Default Communication Language
             </div>
           </div>
-        </form>
+        </div>
+      </div>
+
+      {/* footer */}
+      <div className={`mt-8 border-t border-slate-200 pt-4 ${INNER_W}`}>
+        <div className="flex items-center justify-between">
+          <div className="text-sm">Registration Charges : 200</div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+            >
+              Collect Payment &amp; Register
+            </button>
+            <button type="button" className="btn">Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
