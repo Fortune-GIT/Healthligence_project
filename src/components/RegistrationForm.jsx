@@ -3,8 +3,7 @@ import FormField, { FloatingInput, TinyBox } from "./FormField";
 import FileUpload from "./FileUpload";
 import {
   validateField,
-  computeDOBFromAge,
-  computeAgeFromDOB,
+  // keep using your existing utils where helpful
 } from "../utils/validation";
 import { Camera } from "./Icons";
 
@@ -14,14 +13,81 @@ const commPrefs = ["Odia", "English", "Hindi"];
 // Inner working width per Figma, aligned to the same left rail as the tabs/pills
 const INNER_W = "w-full max-w-[1189px]";
 
+/* ---------- helpers for Age <-> DOB sync (no external deps) ---------- */
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const pad2 = (n) => String(n).padStart(2, "0");
+
+function formatISO(d) {
+  const y = d.getFullYear();
+  const m = pad2(d.getMonth() + 1);
+  const day = pad2(d.getDate());
+  return `${y}-${m}-${day}`;
+}
+
+function daysInMonth(year, monthZeroBased) {
+  return new Date(year, monthZeroBased + 1, 0).getDate();
+}
+
+/** Build a DOB (Date) by subtracting age parts from "today". */
+function dobFromAgeParts(yy = 0, mm = 0, dd = 0) {
+  const y = parseInt(yy || 0, 10);
+  const m = parseInt(mm || 0, 10);
+  const d = parseInt(dd || 0, 10);
+
+  const now = new Date();
+  const base = new Date(
+    now.getFullYear() - clamp(y, 0, 120),
+    now.getMonth() - clamp(m, 0, 11),
+    now.getDate() - clamp(d, 0, 31)
+  );
+  return base; // JS handles month/day underflow
+}
+
+/** Compute age parts (yy,mm,dd) at "today" given an ISO DOB (yyyy-mm-dd). */
+function agePartsFromDOB(iso) {
+  const [Y, M, D] = iso.split("-").map((x) => parseInt(x || 0, 10));
+  if (!Y || !M || !D) return { yy: "", mm: "", dd: "" };
+
+  const today = new Date();
+  const dob = new Date(Y, M - 1, D);
+
+  let yy = today.getFullYear() - dob.getFullYear();
+  let mm = today.getMonth() - dob.getMonth();
+  let dd = today.getDate() - dob.getDate();
+
+  if (dd < 0) {
+    // borrow days from previous month
+    mm -= 1;
+    const prevMonth =
+      mm >= 0 ? mm : 12 + mm; // zero-based for helper
+    const prevYear =
+      mm >= 0 ? today.getFullYear() : today.getFullYear() - 1;
+    dd += daysInMonth(prevYear, prevMonth);
+  }
+  if (mm < 0) {
+    yy -= 1;
+    mm += 12;
+  }
+
+  yy = clamp(yy, 0, 120);
+  mm = clamp(mm, 0, 11);
+  dd = clamp(dd, 0, 31);
+  return { yy: String(yy), mm: String(mm), dd: String(dd) };
+}
+/* -------------------------------------------------------------------- */
+
 export default function RegistrationForm({ onSuccess }) {
   const [values, setValues] = useState({
     mobile: "",
     firstName: "",
     lastName: "",
     gender: "Female",
+
+    // keep a simple "age" field for your existing regex validator – we keep it in sync with ageYY
     age: "",
+
     dob: "",
+
     email: "",
     address1: "",
     address2: "",
@@ -34,6 +100,8 @@ export default function RegistrationForm({ onSuccess }) {
     nextKin: "",
     attendantRel: "",
     attendantName: "",
+
+    // parts for Age and DOB (UI)
     ageYY: "",
     ageMM: "",
     ageDD: "",
@@ -52,35 +120,61 @@ export default function RegistrationForm({ onSuccess }) {
 
   const set = (name, val) => setValues((v) => ({ ...v, [name]: val }));
 
-  // keep helpers in sync
+  /* ---------- Age parts -> DOB (& keep "age" in sync for regex validation) ---------- */
   useEffect(() => {
-    if (values.age && !values.dob) {
-      const dob = computeDOBFromAge(values.age);
-      if (dob) {
-        set("dob", dob);
-        const [Y, M = "", D = ""] = dob.split("-");
-        set("dobYY", Y ?? "");
-        set("dobMM", M ?? "");
-        set("dobDD", D ?? "");
-      }
-    }
-  }, [values.age]);
+    const { ageYY, ageMM, ageDD } = values;
+    const hasAny =
+      (ageYY && ageYY !== "") ||
+      (ageMM && ageMM !== "") ||
+      (ageDD && ageDD !== "");
 
-  useEffect(() => {
-    if (values.dob) {
-      const age = computeAgeFromDOB(values.dob);
-      if (age) set("age", age);
-    }
-  }, [values.dob]);
+    // keep your simple "age" validator happy (0–120)
+    if (ageYY !== values.age) set("age", ageYY || "");
 
+    if (!hasAny) return;
+
+    const dobDate = dobFromAgeParts(ageYY, ageMM, ageDD);
+    const iso = formatISO(dobDate);
+
+    // write DOB string + split boxes
+    if (iso !== values.dob) set("dob", iso);
+
+    const [y, m, d] = iso.split("-");
+    if (y !== values.dobYY) set("dobYY", y);
+    if (m !== values.dobMM) set("dobMM", m);
+    if (d !== values.dobDD) set("dobDD", d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.ageYY, values.ageMM, values.ageDD]);
+
+  /* ---------- DOB parts -> Age parts (& keep "age" in sync) ---------- */
   useEffect(() => {
     const { dobYY, dobMM, dobDD } = values;
+    if (!dobYY && !dobMM && !dobDD) return;
+
     if (dobYY && dobMM && dobDD) {
-      set("dob", `${dobYY}-${dobMM}-${dobDD}`);
-    } else if (!dobYY && !dobMM && !dobDD) {
-      set("dob", "");
+      const iso = `${dobYY}-${dobMM}-${dobDD}`;
+      if (iso !== values.dob) set("dob", iso);
+
+      const p = agePartsFromDOB(iso);
+      if (p.yy !== values.ageYY) set("ageYY", p.yy);
+      if (p.mm !== values.ageMM) set("ageMM", p.mm);
+      if (p.dd !== values.ageDD) set("ageDD", p.dd);
+      if (p.yy !== values.age) set("age", p.yy);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dobYY, values.dobMM, values.dobDD]);
+
+  /* ---------- direct DOB string edits (rare) keep age in sync ---------- */
+  useEffect(() => {
+    const { dob } = values;
+    if (!dob) return;
+    const p = agePartsFromDOB(dob);
+    if (p.yy !== values.ageYY) set("ageYY", p.yy);
+    if (p.mm !== values.ageMM) set("ageMM", p.mm);
+    if (p.dd !== values.ageDD) set("ageDD", p.dd);
+    if (p.yy !== values.age) set("age", p.yy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.dob]);
 
   const validateRequired = () => {
     const next = { ...errors };
@@ -88,12 +182,17 @@ export default function RegistrationForm({ onSuccess }) {
     next.firstName = validateField("firstName", values.firstName);
     next.lastName = validateField("lastName", values.lastName);
 
-    if (!values.age && !values.dob) {
+    // Age/DOB rule: need one or the other (the "age" we keep in sync with ageYY)
+    if (!values.age && !(values.dobYY && values.dobMM && values.dobDD)) {
       next.age = "Provide age or DOB.";
       next.dob = "Provide DOB or age.";
     } else {
       if (values.age) next.age = validateField("age", values.age);
-      if (values.dob) next.dob = validateField("dob", values.dob);
+      if (values.dobYY && values.dobMM && values.dobDD) {
+        next.dob = validateField("dob", `${values.dobYY}-${values.dobMM}-${values.dobDD}`);
+      } else {
+        next.dob = "";
+      }
     }
 
     next.pin = validateField("pin", values.pin);
@@ -105,13 +204,17 @@ export default function RegistrationForm({ onSuccess }) {
   };
 
   const canSubmit = useMemo(() => {
+    const hasAgeOrDob =
+      !!values.age ||
+      (!!values.dobYY && !!values.dobMM && !!values.dobDD);
+
     const minimal =
       values.mobile &&
       values.firstName &&
       values.lastName &&
       values.pin &&
       values.nextKin &&
-      (values.age || values.dob);
+      hasAgeOrDob;
 
     const hasId = idProofs.length > 0;
     const noErrors = Object.values(errors).every((e) => !e);
@@ -236,7 +339,11 @@ export default function RegistrationForm({ onSuccess }) {
 
         {/* RIGHT GROUP (fixed width like Figma) */}
         <div className="w-[630px]">
-          <div className="grid grid-cols-3 gap-6 items-start">
+          {/* 232px (gender) | 180px (age) | auto (OR) | 180px (dob) */}
+          <div
+            className="grid items-end gap-6"
+            style={{ gridTemplateColumns: "232px 180px auto 180px" }}
+          >
             {/* Gender (232px) */}
             <div className="w-[232px]">
               <FormField label="Gender*">
@@ -259,23 +366,64 @@ export default function RegistrationForm({ onSuccess }) {
             </div>
 
             {/* Age (YY/MM/DD) */}
-            <div>
+            <div className="w-[180px]">
               <FormField label="Age*" error={errors.age}>
                 <div className="flex items-end gap-2">
-                  <TinyBox label="YY" value={values.ageYY} onChange={(v) => { set("ageYY", v); set("age", v); }} inputMode="numeric" maxLength={3} />
-                  <TinyBox label="MM" value={values.ageMM} onChange={(v) => set("ageMM", v)} inputMode="numeric" maxLength={2} />
-                  <TinyBox label="DD" value={values.ageDD} onChange={(v) => set("ageDD", v)} inputMode="numeric" maxLength={2} />
+                  <TinyBox
+                    label="YY"
+                    value={values.ageYY}
+                    onChange={(v) => set("ageYY", v)}
+                    inputMode="numeric"
+                    maxLength={3}
+                  />
+                  <TinyBox
+                    label="MM"
+                    value={values.ageMM}
+                    onChange={(v) => set("ageMM", v)}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
+                  <TinyBox
+                    label="DD"
+                    value={values.ageDD}
+                    onChange={(v) => set("ageDD", v)}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
                 </div>
               </FormField>
             </div>
 
+            {/* OR (center) */}
+            <div className="self-center text-center text-[11px] font-medium text-slate-500">
+              OR
+            </div>
+
             {/* DOB (YY/MM/DD) — calendar removed */}
-            <div>
+            <div className="w-[180px]">
               <FormField label="Date of Birth*" error={errors.dob}>
                 <div className="flex items-end gap-2">
-                  <TinyBox label="YY" value={values.dobYY} onChange={(v) => set("dobYY", v)} inputMode="numeric" maxLength={4} />
-                  <TinyBox label="MM" value={values.dobMM} onChange={(v) => set("dobMM", v)} inputMode="numeric" maxLength={2} />
-                  <TinyBox label="DD" value={values.dobDD} onChange={(v) => set("dobDD", v)} inputMode="numeric" maxLength={2} />
+                  <TinyBox
+                    label="YY"
+                    value={values.dobYY}
+                    onChange={(v) => set("dobYY", v)}
+                    inputMode="numeric"
+                    maxLength={4}
+                  />
+                  <TinyBox
+                    label="MM"
+                    value={values.dobMM}
+                    onChange={(v) => set("dobMM", v)}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
+                  <TinyBox
+                    label="DD"
+                    value={values.dobDD}
+                    onChange={(v) => set("dobDD", v)}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
                 </div>
               </FormField>
             </div>
@@ -386,10 +534,10 @@ export default function RegistrationForm({ onSuccess }) {
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">KYC Documents ( Optional )</div>
 
-        <div className="kyc-line mt-2">
-          {/* SINGLE Doc Type (the extra one is removed) */}
+        {/* One horizontal line exactly like the mock: Doc Type | Upload ID | Upload Address | KYC Verified */}
+        <div className="mt-2 flex flex-wrap items-center gap-4">
           <select
-            className="kyc-doc-type"
+            className="select w-40"
             aria-label="Doc type"
             value={kycDocType}
             onChange={(e) => setKycDocType(e.target.value)}
@@ -401,14 +549,10 @@ export default function RegistrationForm({ onSuccess }) {
             <option value="passport">Passport</option>
           </select>
 
-          {/* Upload Identity Proof */}
           <FileUpload title="Upload Identity Proof" type="id" onChange={setIdProofs} />
-
-          {/* Upload Address Proof */}
           <FileUpload title="Upload Address Proof" type="address" onChange={setAddressProofs} />
 
-          {/* KYC Verified (right side) */}
-          <label className="kyc-verify">
+          <label className="ml-auto inline-flex items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
               className="accent-blue-600"
@@ -424,9 +568,9 @@ export default function RegistrationForm({ onSuccess }) {
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">Preferences</div>
 
-        <div className="prefs-line mt-2">
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           {/* Consent for Medical Research — checkbox per requirements */}
-          <div className="prefs-consent">
+          <div className="max-w-[600px]">
             <label className="inline-flex items-center gap-2 text-sm text-slate-800">
               <input
                 type="checkbox"
@@ -442,7 +586,7 @@ export default function RegistrationForm({ onSuccess }) {
           </div>
 
           {/* Communication Preferences */}
-          <div className="prefs-comm">
+          <div>
             <label className="mb-1 block text-xs text-slate-600">
               Communication Preferences
             </label>
