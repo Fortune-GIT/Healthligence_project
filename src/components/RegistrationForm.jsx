@@ -1,19 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import FormField, { FloatingInput, TinyBox } from "./FormField";
 import FileUpload from "./FileUpload";
-import {
-  validateField,
-  // keep using your existing utils where helpful
-} from "../utils/validation";
+import SuccessScreen from "./SuccessScreen";
+import { validateField } from "../utils/validation";
 import { Camera } from "./Icons";
 
 const genders = ["Female", "Male", "Others"];
 const commPrefs = ["Odia", "English", "Hindi"];
-
-// Inner working width per Figma, aligned to the same left rail as the tabs/pills
 const INNER_W = "w-full max-w-[1189px]";
 
-/* ---------- helpers for Age <-> DOB sync (no external deps) ---------- */
+/* ---------- Age <-> DOB helpers ---------- */
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -23,27 +19,20 @@ function formatISO(d) {
   const day = pad2(d.getDate());
   return `${y}-${m}-${day}`;
 }
-
 function daysInMonth(year, monthZeroBased) {
   return new Date(year, monthZeroBased + 1, 0).getDate();
 }
-
-/** Build a DOB (Date) by subtracting age parts from "today". */
 function dobFromAgeParts(yy = 0, mm = 0, dd = 0) {
   const y = parseInt(yy || 0, 10);
   const m = parseInt(mm || 0, 10);
   const d = parseInt(dd || 0, 10);
-
   const now = new Date();
-  const base = new Date(
+  return new Date(
     now.getFullYear() - clamp(y, 0, 120),
     now.getMonth() - clamp(m, 0, 11),
     now.getDate() - clamp(d, 0, 31)
   );
-  return base; // JS handles month/day underflow
 }
-
-/** Compute age parts (yy,mm,dd) at "today" given an ISO DOB (yyyy-mm-dd). */
 function agePartsFromDOB(iso) {
   const [Y, M, D] = iso.split("-").map((x) => parseInt(x || 0, 10));
   if (!Y || !M || !D) return { yy: "", mm: "", dd: "" };
@@ -56,12 +45,9 @@ function agePartsFromDOB(iso) {
   let dd = today.getDate() - dob.getDate();
 
   if (dd < 0) {
-    // borrow days from previous month
     mm -= 1;
-    const prevMonth =
-      mm >= 0 ? mm : 12 + mm; // zero-based for helper
-    const prevYear =
-      mm >= 0 ? today.getFullYear() : today.getFullYear() - 1;
+    const prevMonth = mm >= 0 ? mm : 12 + mm;
+    const prevYear = mm >= 0 ? today.getFullYear() : today.getFullYear() - 1;
     dd += daysInMonth(prevYear, prevMonth);
   }
   if (mm < 0) {
@@ -74,18 +60,19 @@ function agePartsFromDOB(iso) {
   dd = clamp(dd, 0, 31);
   return { yy: String(yy), mm: String(mm), dd: String(dd) };
 }
-/* -------------------------------------------------------------------- */
+const onlyDigits = (s) => (s ?? "").replace(/\D/g, "");
 
-export default function RegistrationForm({ onSuccess }) {
+/* -------------------------------------------------- */
+
+export default function RegistrationForm() {
   const [values, setValues] = useState({
     mobile: "",
     firstName: "",
     lastName: "",
     gender: "Female",
 
-    // keep a simple "age" field for your existing regex validator – we keep it in sync with ageYY
+    // simple "age" to keep your existing validator happy (synced to ageYY)
     age: "",
-
     dob: "",
 
     email: "",
@@ -101,7 +88,7 @@ export default function RegistrationForm({ onSuccess }) {
     attendantRel: "",
     attendantName: "",
 
-    // parts for Age and DOB (UI)
+    // UI parts
     ageYY: "",
     ageMM: "",
     ageDD: "",
@@ -116,27 +103,23 @@ export default function RegistrationForm({ onSuccess }) {
   const [idProofs, setIdProofs] = useState([]);
   const [addressProofs, setAddressProofs] = useState([]);
   const [kycVerified, setKycVerified] = useState(false);
-  const [kycDocType, setKycDocType] = useState(""); // single Doc Type (others removed)
+  const [kycDocType, setKycDocType] = useState("");
+
+  // success screen
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState(null);
 
   const set = (name, val) => setValues((v) => ({ ...v, [name]: val }));
 
-  /* ---------- Age parts -> DOB (& keep "age" in sync for regex validation) ---------- */
+  /* ---------- Age parts -> DOB (and sync "age") ---------- */
   useEffect(() => {
     const { ageYY, ageMM, ageDD } = values;
-    const hasAny =
-      (ageYY && ageYY !== "") ||
-      (ageMM && ageMM !== "") ||
-      (ageDD && ageDD !== "");
+    const hasAny = !!ageYY || !!ageMM || !!ageDD;
 
-    // keep your simple "age" validator happy (0–120)
     if (ageYY !== values.age) set("age", ageYY || "");
-
     if (!hasAny) return;
 
-    const dobDate = dobFromAgeParts(ageYY, ageMM, ageDD);
-    const iso = formatISO(dobDate);
-
-    // write DOB string + split boxes
+    const iso = formatISO(dobFromAgeParts(ageYY, ageMM, ageDD));
     if (iso !== values.dob) set("dob", iso);
 
     const [y, m, d] = iso.split("-");
@@ -146,7 +129,7 @@ export default function RegistrationForm({ onSuccess }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.ageYY, values.ageMM, values.ageDD]);
 
-  /* ---------- DOB parts -> Age parts (& keep "age" in sync) ---------- */
+  /* ---------- DOB parts -> Age parts (and sync "age") ---------- */
   useEffect(() => {
     const { dobYY, dobMM, dobDD } = values;
     if (!dobYY && !dobMM && !dobDD) return;
@@ -164,11 +147,10 @@ export default function RegistrationForm({ onSuccess }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dobYY, values.dobMM, values.dobDD]);
 
-  /* ---------- direct DOB string edits (rare) keep age in sync ---------- */
+  /* ---------- direct DOB string change -> sync age ---------- */
   useEffect(() => {
-    const { dob } = values;
-    if (!dob) return;
-    const p = agePartsFromDOB(dob);
+    if (!values.dob) return;
+    const p = agePartsFromDOB(values.dob);
     if (p.yy !== values.ageYY) set("ageYY", p.yy);
     if (p.mm !== values.ageMM) set("ageMM", p.mm);
     if (p.dd !== values.ageDD) set("ageDD", p.dd);
@@ -176,23 +158,33 @@ export default function RegistrationForm({ onSuccess }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dob]);
 
+  /* ---------- validation ---------- */
+  const onBlurField =
+    (name) =>
+    (e) =>
+      setErrors((prev) => ({
+        ...prev,
+        [name]: validateField(name, e.target.value),
+      }));
+
   const validateRequired = () => {
     const next = { ...errors };
     next.mobile = validateField("mobile", values.mobile);
     next.firstName = validateField("firstName", values.firstName);
     next.lastName = validateField("lastName", values.lastName);
 
-    // Age/DOB rule: need one or the other (the "age" we keep in sync with ageYY)
+    // need age or full dob
     if (!values.age && !(values.dobYY && values.dobMM && values.dobDD)) {
       next.age = "Provide age or DOB.";
       next.dob = "Provide DOB or age.";
     } else {
       if (values.age) next.age = validateField("age", values.age);
       if (values.dobYY && values.dobMM && values.dobDD) {
-        next.dob = validateField("dob", `${values.dobYY}-${values.dobMM}-${values.dobDD}`);
-      } else {
-        next.dob = "";
-      }
+        next.dob = validateField(
+          "dob",
+          `${values.dobYY}-${values.dobMM}-${values.dobDD}`
+        );
+      } else next.dob = "";
     }
 
     next.pin = validateField("pin", values.pin);
@@ -221,18 +213,44 @@ export default function RegistrationForm({ onSuccess }) {
     return minimal && hasId && noErrors;
   }, [values, errors, idProofs]);
 
-  const onBlurField =
-    (name) =>
-    (e) =>
-      setErrors((prev) => ({
-        ...prev,
-        [name]: validateField(name, e.target.value),
-      }));
+  /* ---------- sanitize tiny boxes ---------- */
+  const onAgeYY = (v) => {
+    const d = onlyDigits(v);
+    const n = d === "" ? "" : String(clamp(parseInt(d, 10), 0, 120));
+    set("ageYY", n);
+  };
+  const onAgeMM = (v) => {
+    const d = onlyDigits(v);
+    const n = d === "" ? "" : String(clamp(parseInt(d, 10), 0, 11));
+    set("ageMM", n);
+  };
+  const onAgeDD = (v) => {
+    const d = onlyDigits(v);
+    const n = d === "" ? "" : String(clamp(parseInt(d, 10), 0, 31));
+    set("ageDD", n);
+  };
 
+  const onDobYY = (v) => {
+    const d = onlyDigits(v).slice(0, 4);
+    const year =
+      d === "" ? "" : String(clamp(parseInt(d, 10), 1900, new Date().getFullYear()));
+    set("dobYY", year);
+  };
+  const onDobMM = (v) => {
+    const d = onlyDigits(v);
+    const n = d === "" ? "" : pad2(clamp(parseInt(d, 10), 1, 12));
+    set("dobMM", n);
+  };
+  const onDobDD = (v) => {
+    const d = onlyDigits(v);
+    const n = d === "" ? "" : pad2(clamp(parseInt(d, 10), 1, 31));
+    set("dobDD", n);
+  };
+
+  /* ---------- submit ---------- */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateRequired()) return;
-
     if (idProofs.length === 0) {
       alert("Please upload at least one ID proof.");
       return;
@@ -244,7 +262,7 @@ export default function RegistrationForm({ onSuccess }) {
         .join("")
         .toUpperCase();
 
-    onSuccess?.({
+    const payload = {
       ...values,
       consent,
       comm,
@@ -255,8 +273,21 @@ export default function RegistrationForm({ onSuccess }) {
       uhid: `IGH-${rand(7)}`,
       billNo: `FB${rand(8)}`,
       txnId: `TRX${rand(10)}`,
-    });
+    };
+    setResult(payload);
+    setSubmitted(true);
   };
+
+  if (submitted) {
+    return (
+      <SuccessScreen
+        uhid={result.uhid}
+        billNo={result.billNo}
+        txnId={result.txnId}
+        onClose={() => setSubmitted(false)}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1280px] px-6 py-6">
@@ -276,7 +307,7 @@ export default function RegistrationForm({ onSuccess }) {
         </div>
       </div>
 
-      {/* pills — muted strip like Figma */}
+      {/* pills */}
       <div className={`${INNER_W} mt-2 mb-5`}>
         <div className="pillbar w-fit rounded-lg bg-muted p-1">
           <button type="button" className="pill pill-active">Regular</button>
@@ -291,7 +322,7 @@ export default function RegistrationForm({ onSuccess }) {
         <div className="badge">Identification Details</div>
       </div>
 
-      {/* 3-column grid: [56px avatar] [mobile+names] [fixed 630px right-group] */}
+      {/* grid */}
       <div
         className={`${INNER_W} grid items-start gap-3`}
         style={{ gridTemplateColumns: "56px minmax(440px,1fr) 630px" }}
@@ -310,7 +341,7 @@ export default function RegistrationForm({ onSuccess }) {
           </div>
         </div>
 
-        {/* MOBILE + NAMES (left column) */}
+        {/* MOBILE + NAMES */}
         <div className="grid gap-3">
           <FloatingInput
             label="Enter Mobile Number *"
@@ -337,14 +368,13 @@ export default function RegistrationForm({ onSuccess }) {
           </div>
         </div>
 
-        {/* RIGHT GROUP (fixed width like Figma) */}
+        {/* RIGHT GROUP */}
         <div className="w-[630px]">
-          {/* 232px (gender) | 180px (age) | auto (OR) | 180px (dob) */}
           <div
             className="grid items-end gap-6"
             style={{ gridTemplateColumns: "232px 180px auto 180px" }}
           >
-            {/* Gender (232px) */}
+            {/* Gender */}
             <div className="w-[232px]">
               <FormField label="Gender*">
                 <div className="segmented">
@@ -369,61 +399,25 @@ export default function RegistrationForm({ onSuccess }) {
             <div className="w-[180px]">
               <FormField label="Age*" error={errors.age}>
                 <div className="flex items-end gap-2">
-                  <TinyBox
-                    label="YY"
-                    value={values.ageYY}
-                    onChange={(v) => set("ageYY", v)}
-                    inputMode="numeric"
-                    maxLength={3}
-                  />
-                  <TinyBox
-                    label="MM"
-                    value={values.ageMM}
-                    onChange={(v) => set("ageMM", v)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
-                  <TinyBox
-                    label="DD"
-                    value={values.ageDD}
-                    onChange={(v) => set("ageDD", v)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
+                  <TinyBox label="YY" value={values.ageYY} onChange={onAgeYY} inputMode="numeric" maxLength={3} />
+                  <TinyBox label="MM" value={values.ageMM} onChange={onAgeMM} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="DD" value={values.ageDD} onChange={onAgeDD} inputMode="numeric" maxLength={2} />
                 </div>
               </FormField>
             </div>
 
-            {/* OR (center) */}
+            {/* OR */}
             <div className="self-center text-center text-[11px] font-medium text-slate-500">
               OR
             </div>
 
-            {/* DOB (YY/MM/DD) — calendar removed */}
+            {/* DOB (YY/MM/DD) */}
             <div className="w-[180px]">
               <FormField label="Date of Birth*" error={errors.dob}>
                 <div className="flex items-end gap-2">
-                  <TinyBox
-                    label="YY"
-                    value={values.dobYY}
-                    onChange={(v) => set("dobYY", v)}
-                    inputMode="numeric"
-                    maxLength={4}
-                  />
-                  <TinyBox
-                    label="MM"
-                    value={values.dobMM}
-                    onChange={(v) => set("dobMM", v)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
-                  <TinyBox
-                    label="DD"
-                    value={values.dobDD}
-                    onChange={(v) => set("dobDD", v)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
+                  <TinyBox label="YY" value={values.dobYY} onChange={onDobYY} inputMode="numeric" maxLength={4} />
+                  <TinyBox label="MM" value={values.dobMM} onChange={onDobMM} inputMode="numeric" maxLength={2} />
+                  <TinyBox label="DD" value={values.dobDD} onChange={onDobDD} inputMode="numeric" maxLength={2} />
                 </div>
               </FormField>
             </div>
@@ -431,110 +425,44 @@ export default function RegistrationForm({ onSuccess }) {
         </div>
       </div>
 
-      {/* ===== Contact Details (exact Figma layout) ===== */}
+      {/* ===== Contact Details ===== */}
       <div className={`mt-6 ${INNER_W}`}>
         <div className="badge">Contact Details</div>
 
-        {/* Row 1: Address1, Address2, PIN, Area, City, District, State, IN chip */}
         <div
           className="mt-2 grid gap-4"
           style={{
             gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 56px",
           }}
         >
-          <FloatingInput
-            label="Address Line 1 *"
-            value={values.address1}
-            onChange={(v) => set("address1", v)}
-          />
-          <FloatingInput
-            label="Address Line 2 *"
-            value={values.address2}
-            onChange={(v) => set("address2", v)}
-          />
-          <FloatingInput
-            label="PIN*"
-            value={values.pin}
-            onChange={(v) => set("pin", v)}
-            onBlur={onBlurField("pin")}
-            error={errors.pin}
-          />
-          <FloatingInput
-            label="Select Area*"
-            value={values.area}
-            onChange={(v) => set("area", v)}
-          />
-          <FloatingInput
-            label="City"
-            value={values.city}
-            onChange={(v) => set("city", v)}
-          />
-          <FloatingInput
-            label="District*"
-            value={values.district}
-            onChange={(v) => set("district", v)}
-          />
-          {/* State field (no right addon) */}
-          <FloatingInput
-            label="State*"
-            value={values.state}
-            onChange={(v) => set("state", v)}
-          />
-          {/* External IN chip (outside the state input) */}
+          <FloatingInput label="Address Line 1 *" value={values.address1} onChange={(v) => set("address1", v)} />
+          <FloatingInput label="Address Line 2 *" value={values.address2} onChange={(v) => set("address2", v)} />
+          <FloatingInput label="PIN*" value={values.pin} onChange={(v) => set("pin", v)} onBlur={onBlurField("pin")} error={errors.pin} />
+          <FloatingInput label="Select Area*" value={values.area} onChange={(v) => set("area", v)} />
+          <FloatingInput label="City" value={values.city} onChange={(v) => set("city", v)} />
+          <FloatingInput label="District*" value={values.district} onChange={(v) => set("district", v)} />
+          <FloatingInput label="State*" value={values.state} onChange={(v) => set("state", v)} />
           <div className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-600">
             IN
           </div>
         </div>
 
-        {/* Row 2: Primary Reg No, Next Kin, Email */}
-        <div
-          className="mt-4 grid gap-4"
-          style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
-        >
-          <FloatingInput
-            label="Primary Registered Number*"
-            value={values.primaryRegNo}
-            onChange={(v) => set("primaryRegNo", v)}
-          />
-          <FloatingInput
-            label="Next Kin Contact No. *"
-            value={values.nextKin}
-            onChange={(v) => set("nextKin", v)}
-            onBlur={onBlurField("nextKin")}
-            error={errors.nextKin}
-          />
-          <FloatingInput
-            label="Email"
-            value={values.email}
-            onChange={(v) => set("email", v)}
-            onBlur={onBlurField("email")}
-            error={errors.email}
-          />
+        <div className="mt-4 grid gap-4" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+          <FloatingInput label="Primary Registered Number*" value={values.primaryRegNo} onChange={(v) => set("primaryRegNo", v)} />
+          <FloatingInput label="Next Kin Contact No. *" value={values.nextKin} onChange={(v) => set("nextKin", v)} onBlur={onBlurField("nextKin")} error={errors.nextKin} />
+          <FloatingInput label="Email" value={values.email} onChange={(v) => set("email", v)} onBlur={onBlurField("email")} error={errors.email} />
         </div>
 
-        {/* Row 3: Attendant Name, Attendant Relationship */}
-        <div
-          className="mt-4 grid gap-4"
-          style={{ gridTemplateColumns: "1fr 1fr" }}
-        >
-          <FloatingInput
-            label="Attendant Name"
-            value={values.attendantName}
-            onChange={(v) => set("attendantName", v)}
-          />
-          <FloatingInput
-            label="Attendant Relationship"
-            value={values.attendantRel}
-            onChange={(v) => set("attendantRel", v)}
-          />
+        <div className="mt-4 grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <FloatingInput label="Attendant Name" value={values.attendantName} onChange={(v) => set("attendantName", v)} />
+          <FloatingInput label="Attendant Relationship" value={values.attendantRel} onChange={(v) => set("attendantRel", v)} />
         </div>
       </div>
 
-      {/* ===== KYC Documents (single-line like Figma) ===== */}
+      {/* ===== KYC Documents (single line) ===== */}
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">KYC Documents ( Optional )</div>
 
-        {/* One horizontal line exactly like the mock: Doc Type | Upload ID | Upload Address | KYC Verified */}
         <div className="mt-2 flex flex-wrap items-center gap-4">
           <select
             className="select w-40"
@@ -549,35 +477,25 @@ export default function RegistrationForm({ onSuccess }) {
             <option value="passport">Passport</option>
           </select>
 
+          {/* Uploaders (no internal Doc Type selects) */}
           <FileUpload title="Upload Identity Proof" type="id" onChange={setIdProofs} />
           <FileUpload title="Upload Address Proof" type="address" onChange={setAddressProofs} />
 
           <label className="ml-auto inline-flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              className="accent-blue-600"
-              checked={kycVerified}
-              onChange={(e) => setKycVerified(e.target.checked)}
-            />
+            <input type="checkbox" className="accent-blue-600" checked={kycVerified} onChange={(e) => setKycVerified(e.target.checked)} />
             KYC Verified
           </label>
         </div>
       </div>
 
-      {/* ===== Preferences (left: consent checkbox; right: communication) ===== */}
+      {/* ===== Preferences ===== */}
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">Preferences</div>
 
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-          {/* Consent for Medical Research — checkbox per requirements */}
           <div className="max-w-[600px]">
             <label className="inline-flex items-center gap-2 text-sm text-slate-800">
-              <input
-                type="checkbox"
-                className="accent-blue-600"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-              />
+              <input type="checkbox" className="accent-blue-600" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               Consent for Medical Research
             </label>
             <div className="mt-2 text-xs text-slate-500">
@@ -585,25 +503,14 @@ export default function RegistrationForm({ onSuccess }) {
             </div>
           </div>
 
-          {/* Communication Preferences */}
           <div>
-            <label className="mb-1 block text-xs text-slate-600">
-              Communication Preferences
-            </label>
-            <select
-              className="select w-40"
-              value={comm}
-              onChange={(e) => setComm(e.target.value)}
-            >
+            <label className="mb-1 block text-xs text-slate-600">Communication Preferences</label>
+            <select className="select w-40" value={comm} onChange={(e) => setComm(e.target.value)}>
               {commPrefs.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <div className="mt-2 text-xs text-slate-500">
-              Default Communication Language
-            </div>
+            <div className="mt-2 text-xs text-slate-500">Default Communication Language</div>
           </div>
         </div>
       </div>
