@@ -44,7 +44,7 @@ export function FloatingInput({
   );
 }
 
-/* tiny 48×40 inputs with mini label (YY/MM/DD) */
+/* tiny  (YY/MM/DD) */
 export function TinyBox({
   label,
   value,

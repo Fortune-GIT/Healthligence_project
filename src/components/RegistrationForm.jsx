@@ -9,7 +9,7 @@ const genders = ["Female", "Male", "Others"];
 const commPrefs = ["Odia", "English", "Hindi"];
 const INNER_W = "w-full max-w-[1189px]";
 
-/* ---------- Age <-> DOB helpers ---------- */
+/*  Age <-> DOB helpers  */
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -71,7 +71,7 @@ export default function RegistrationForm() {
     lastName: "",
     gender: "Female",
 
-    // simple "age" to keep your existing validator happy (synced to ageYY)
+    // simple "age" to keep  existing validator happy (synced to ageYY)
     age: "",
     dob: "",
 
@@ -111,7 +111,7 @@ export default function RegistrationForm() {
 
   const set = (name, val) => setValues((v) => ({ ...v, [name]: val }));
 
-  /* ---------- Age parts -> DOB (and sync "age") ---------- */
+  /*  Age parts -> DOB (and sync "age")  */
   useEffect(() => {
     const { ageYY, ageMM, ageDD } = values;
     const hasAny = !!ageYY || !!ageMM || !!ageDD;
@@ -129,7 +129,7 @@ export default function RegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.ageYY, values.ageMM, values.ageDD]);
 
-  /* ---------- DOB parts -> Age parts (and sync "age") ---------- */
+  /*  DOB parts -> Age parts (and sync "age")  */
   useEffect(() => {
     const { dobYY, dobMM, dobDD } = values;
     if (!dobYY && !dobMM && !dobDD) return;
@@ -147,7 +147,7 @@ export default function RegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dobYY, values.dobMM, values.dobDD]);
 
-  /* ---------- direct DOB string change -> sync age ---------- */
+  /*  direct DOB string change -> sync age  */
   useEffect(() => {
     if (!values.dob) return;
     const p = agePartsFromDOB(values.dob);
@@ -158,7 +158,7 @@ export default function RegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.dob]);
 
-  /* ---------- validation ---------- */
+  /*  validation  */
   const onBlurField =
     (name) =>
     (e) =>
@@ -214,7 +214,7 @@ export default function RegistrationForm() {
     return minimal && hasId && noErrors;
   }, [values, errors, idProofs]);
 
-  /* ---------- AGE & DOB INPUTS: free typing, clamp on blur ---------- */
+  /*  AGE & DOB INPUTS */
   // AGE
   const onAgeYY = (v) => set("ageYY", onlyDigits(v).slice(0, 3));
   const onAgeYYBlur = () => {
@@ -262,7 +262,7 @@ export default function RegistrationForm() {
     set("dobDD", isNaN(n) ? "" : pad2(n));
   };
 
-  /* ---------- Uploaded files list (compact & Figma-like) ---------- */
+  /*  Uploaded files list  */
   const uploadedList = useMemo(() => {
     const safeName = (f) =>
       typeof f === "string" ? f : f?.name || f?.file?.name || "file";
@@ -284,7 +284,7 @@ export default function RegistrationForm() {
     }
   };
 
-  /* ---------- submit ---------- */
+  /*  submit  */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateRequired()) return;
@@ -354,7 +354,7 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* ===== Identification Details ===== */}
+      {/*  Identification Details  */}
       <div className={`mb-2 ${INNER_W}`}>
         <div className="badge">Identification Details</div>
       </div>
@@ -462,7 +462,7 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* ===== Contact Details ===== */}
+      {/* Contact Details */}
       <div className={`mt-6 ${INNER_W}`}>
         <div className="badge">Contact Details</div>
 
@@ -496,7 +496,7 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* ===== KYC Documents (single line) ===== */}
+      {/* KYC Documents */}
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">KYC Documents ( Optional )</div>
 
@@ -539,7 +539,7 @@ export default function RegistrationForm() {
           </label>
         </div>
 
-        {/* Compact uploaded list (Figma-like) */}
+        {/* Compact uploaded list */}
         {uploadedList.length > 0 && (
           <div className="mt-2 w-[331px] overflow-hidden rounded-md border border-slate-200 bg-white">
             {uploadedList.map((f, i) => (
@@ -575,7 +575,7 @@ export default function RegistrationForm() {
         )}
       </div>
 
-      {/* ===== Preferences ===== */}
+      {/*  Preferences  */}
       <div className={`${INNER_W} mt-6`}>
         <div className="badge">Preferences</div>
 

@@ -2,14 +2,13 @@ import React, { useRef } from "react";
 
 /**
  * Lightweight uploader used by RegistrationForm.
- * - Does NOT render any uploaded filenames.
  * - Accepts only JPG/JPEG/PDF.
  * - Calls the parent's setter (passed via `onChange`) to append files.
- *
+ * 
  * Props:
  *  - title: string (button label)
  *  - type: "id" | "address" (semantic only)
- *  - icon: "download" | "sliders" | ReactNode (optional)
+ *  - icon: "download" 
  *  - onChange: React setState function for the corresponding files array
  */
 export default function FileUpload({
@@ -42,7 +41,7 @@ export default function FileUpload({
   const renderIcon = () => {
     if (React.isValidElement(icon)) return icon;
 
-    // Built-in minimalist icons to mirror Figma tone
+    // icons
     switch (icon) {
       case "sliders":
         // three vertical sliders
@@ -62,7 +61,7 @@ export default function FileUpload({
         );
       case "download":
       default:
-        // tray with arrow (upload/attach vibe)
+        // tray with arrow (upload/attach)
         return (
           <svg
             width="16"
